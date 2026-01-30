@@ -1,5 +1,5 @@
 # Core dependencies
-uvicorn
+uvicorn[standard]
 fastapi 
 python-multipart
 pydantic

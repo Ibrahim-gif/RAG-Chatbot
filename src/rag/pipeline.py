@@ -81,3 +81,8 @@ def build_conversation_history(system_prompt: str, conversation_history: list | 
             messages.append({"role": "assistant", "content": turn["assistant"]})
             
     return messages
+
+def list_all_documents():
+    embedder = OpenAIEmbedder()
+    db = FaissStore(embedding_fn=embedder._client)
+    return list(set(document.metadata["source"].replace("data\\docs\\","") for document in db._vs.docstore._dict.values()))

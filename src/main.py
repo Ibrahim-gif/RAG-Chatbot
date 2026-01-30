@@ -1,7 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
-from src.rag.pipeline import add_to_index
+from src.rag.pipeline import add_to_index, list_all_documents
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -27,6 +27,11 @@ ALLOWED_CONTENT_TYPES = {
 def safe_filename(name: str) -> str:
     # strips any path components + null bytes
     return Path(name).name.replace("\x00", "")
+
+@app.get("/files")
+def list_files():
+    return list_all_documents()
+
 
 @app.post("/upload")
 async def add_documents(file: UploadFile = File(...)):

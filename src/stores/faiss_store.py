@@ -3,11 +3,13 @@ from __future__ import annotations
 
 import os
 from typing import List, Optional, Tuple
+from pathlib import Path
 
 import faiss
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 from langchain_community.docstore.in_memory import InMemoryDocstore
+import logging
 
 class FaissStore:
     """
@@ -15,25 +17,25 @@ class FaissStore:
     Stores Documents with page_content + metadata.
     """
 
-    def __init__(self, index_dir: str, embedding_fn):
+    def __init__(self, embedding_fn=None):
         """
         embedding_fn: something that behaves like LangChain embeddings
-                      (e.g., OpenAIEmbeddings or our wrapper's internal client)
+        (e.g., OpenAIEmbeddings or our wrapper's internal client)
         """
-        self.index_dir = index_dir
+        self.index_dir = Path("faiss_index").resolve()
         self.embedding_fn = embedding_fn
         self._vs: Optional[FAISS] = None
-
-    def load_or_create(self) -> None:
-        if os.path.exists(self.index_dir) and os.listdir(self.index_dir):
+        
+        if os.path.exists(self.index_dir):
+            logging.info(f"Loading existing FAISS index from {self.index_dir}")
             self._vs = FAISS.load_local(
                 folder_path=self.index_dir,
                 embeddings=self.embedding_fn,
                 allow_dangerous_deserialization=True,
             )
-        else:
-            # Create an empty index by building from a single empty doc then clearing it
-            index = index = faiss.IndexFlatL2(len(self.embedding_fn.embed_query("hello world")))
+        else: 
+            index = faiss.IndexFlatL2(len(self.embedding_fn.embed_query("hello world")))
+            logging.info(f"Creating new FAISS index at {self.index_dir}")
 
             self._vs = FAISS(
                 embedding_function=self.embedding_fn,
@@ -42,20 +44,17 @@ class FaissStore:
                 index_to_docstore_id={},
             )
 
-            self.save()
-
-    def add_texts(self, texts: List[str], metadatas: List[dict]) -> None:
+    def add_documents(self, texts: List[str], metadatas: List[dict]) -> None:
         self._ensure_ready()
         self._vs.add_texts(texts=texts, metadatas=metadatas)
+        self._vs.save_local(self.index_dir)
 
     def similarity_search_with_score(self, query: str, k: int = 5) -> List[Tuple[Document, float]]:
         self._ensure_ready()
-        return self._vs.similarity_search_with_score(query=query, k=k)
-
-    def save(self) -> None:
-        self._ensure_ready()
-        os.makedirs(self.index_dir, exist_ok=True)
-        self._vs.save_local(self.index_dir)
+        #'similarity' (default),'mmr', 'similarity_score_threshold'
+        retriever = self._vs.as_retriever(search_type="similarity", search_kwargs={"k": k})
+        # retriever.invoke(query, filter={"page": 0})
+        return retriever.invoke(query)
 
     def _ensure_ready(self) -> None:
         if self._vs is None:

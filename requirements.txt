@@ -2,6 +2,7 @@
 uvicorn
 fastapi 
 python-multipart
+pydantic
 # Utilities
 python-dotenv>=1.0.0
 

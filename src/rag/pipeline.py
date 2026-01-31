@@ -16,11 +16,12 @@ def add_to_index(file_path: str, document_type: str = "pdf"):
         pdf_loader = PyPDFLoader(file_path=file_path)
         document = pdf_loader.load()
     elif document_type == "md":
-        md_loader = TextLoader(file_path)
-        document = md_loader.load()
+        with open(file_path, "r", encoding="utf-8") as f:
+            document = f.read()
         
-    chunker = Chunking(document_type=document_type)
+    chunker = Chunking(document_name=file_path, document_type=document_type)
     chunks = chunker.chunk_document(document)
+    print(f"Chunks: {chunks[0]}")
 
     # Initialize embedder and vector store
     embedder = OpenAIEmbedder()
@@ -75,7 +76,7 @@ def RAGGeneration(user_query: str, retriever_query:str | None, k: int = 5, conve
 def list_all_documents():
     embedder = OpenAIEmbedder()
     db = FaissStore(embedding_fn=embedder._client)
-    return list(set(document.metadata["source"].replace("data\\docs\\","") for document in db._vs.docstore._dict.values()))
+    return list(set(str(document.metadata["source"]).replace("data\\docs\\","") for document in db._vs.docstore._dict.values()))
 
 def filter_chunk_noise(user_content_with_ref_docs: dict):
     return [
@@ -85,3 +86,9 @@ def filter_chunk_noise(user_content_with_ref_docs: dict):
         }
         for doc in user_content_with_ref_docs
     ]
+
+def delete_from_vector_store(file_name: str):
+    embedder = OpenAIEmbedder()
+    db = FaissStore(embedding_fn=embedder._client)
+    db.delete(file_name)
+    return True

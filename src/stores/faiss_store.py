@@ -59,3 +59,11 @@ class FaissStore:
     def _ensure_ready(self) -> None:
         if self._vs is None:
             raise RuntimeError("FaissStore is not initialized. Call load_or_create() first.")
+        
+    def delete(self, file_name: str):
+        delete_list_ids = []
+        for document in self._vs.docstore._dict.values():
+            if str(document.metadata.get("source")).endswith(file_name):
+                delete_list_ids.append(document.id)
+        self._vs.delete(delete_list_ids)
+        self._vs.save_local(self.index_dir)

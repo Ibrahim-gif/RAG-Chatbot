@@ -1,7 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
-from src.rag.pipeline import add_to_index, list_all_documents, RAGAgent
+from src.rag.pipeline import add_to_index, list_all_documents, RAGAgent, delete_from_vector_store
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -11,7 +11,7 @@ app = FastAPI(title="RAG API for E Source", version="0.1.0")
 # Allow React dev server to call FastAPI
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://192.168.2.26:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -31,6 +31,10 @@ def safe_filename(name: str) -> str:
 @app.get("/files")
 def list_files():
     return list_all_documents()
+
+@app.post("/delete")
+def delete_file(file_name: str = Body(..., embed=True)):
+    return delete_from_vector_store(file_name)
 
 
 @app.post("/upload")

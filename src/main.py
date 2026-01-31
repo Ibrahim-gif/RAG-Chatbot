@@ -1,7 +1,7 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
-from src.rag.pipeline import add_to_index, list_all_documents
+from src.rag.pipeline import add_to_index, list_all_documents, RAGAgent
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -83,6 +83,23 @@ async def add_documents(file: UploadFile = File(...)):
     }
 
 
+@app.post("/get_response")
+def get_response(conversation_history: list = Body(...)):
+    print(f"Conversation History length: {len(conversation_history)}")
+    
+    if len(conversation_history) == 0:
+        raise HTTPException(status_code=400, detail="Conversation history is empty")
+    
+    # Shorten the conversation history if needed
+    max_history_length = 10  # Define a maximum length for the conversation history
+    if len(conversation_history) > max_history_length:
+        conversation_history = conversation_history[-max_history_length:]
+    response = RAGAgent(user_query=conversation_history[-1]["content"], conversation_history=conversation_history[:-1])
+    if type(response) == str:
+        return {"response": response}
+    print(f"Sources: {response.sources}")
+    return {"response": response.answer, "sources": response.sources}
+     
 # import os
 # import glob
 # import tiktoken

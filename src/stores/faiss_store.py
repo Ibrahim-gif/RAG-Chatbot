@@ -49,7 +49,7 @@ class FaissStore:
         self._vs.add_texts(texts=texts, metadatas=metadatas)
         self._vs.save_local(self.index_dir)
 
-    def similarity_search_with_score(self, query: str, k: int = 5) -> List[Tuple[Document, float]]:
+    def similarity_search(self, query: str, k: int = 5) -> List[Tuple[Document, float]]:
         self._ensure_ready()
         #'similarity' (default),'mmr', 'similarity_score_threshold'
         retriever = self._vs.as_retriever(search_type="similarity", search_kwargs={"k": k})

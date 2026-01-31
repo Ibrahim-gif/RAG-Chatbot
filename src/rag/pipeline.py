@@ -36,53 +36,52 @@ def add_to_index(file_path: str, document_type: str = "pdf"):
     vector_store.add_documents(texts=texts, metadatas=metadatas)
     return True
 
-def RAGAgent(user_query: str, k: int = 5, conversation_history: list | None = None):
+def RAGAgent(user_query: str, k: int = 10, conversation_history: list | None = None):
     
     #check if the llm can answer from the previous / available context before going to retrieval
-    messages = build_conversation_history(system_prompt=RAG_ROUTER_SYSTEM_PROMPT, conversation_history=conversation_history)
     # Initialize LLM
     llm = OpenAIChatLLM(model_name="gpt-4.1-mini")
-    rag_router = llm.structured_generate(messages=messages + [{"role": "user", "content": f"User Query: {user_query}"}], response_class=RAGRouterResponse)
+    rag_router = llm.structured_generate(messages=conversation_history, user_query=user_query, system_message=RAG_ROUTER_SYSTEM_PROMPT, response_class=RAGRouterResponse)
+    print(f"RAG Router Decision: Retrieve = {rag_router.fetch_vector_store}, Retrieval Query = {rag_router.retrieval_query}")
     
-    if rag_router.retrieve == False:
+    if rag_router.fetch_vector_store == False:
         # Generate response without retrieval
-        response = llm.structured_generate(messages=messages + [{"role": "user", "content": user_query}], response_class=LLMResponseWithCitations)
+        response = llm.generate(messages=conversation_history, user_query=user_query, system_message=AI_ASSISTANT_SYSTEM_PROMPT)
+        print(f"RAG Router LLM-only response: {response}")
         return response
     else:
         # Proceed to retrieval-augmented generation
-        return RAGGeneration(user_query=user_query, retriever_query= rag_router.retrieval_query, k=k, conversation_history=messages, llm=llm)
+        return RAGGeneration(user_query=user_query, retriever_query= rag_router.retrieval_query, k=k, conversation_history=conversation_history, llm=llm)
     
     
 def RAGGeneration(user_query: str, retriever_query:str | None, k: int = 5, conversation_history: list | None = None, llm: OpenAIChatLLM | None = None):
     # Load Vector Store
     embedder = OpenAIEmbedder()
-    vector_store = FaissStore(embedding_fn=embedder)
+    vector_store = FaissStore(embedding_fn=embedder._client)
     
     # Perform similarity search
-    relevant_docs_with_scores = vector_store.similarity_search_with_score(query=retriever_query or user_query, k=k)
-    relevant_docs = [doc for doc, score in relevant_docs_with_scores]
+    relevant_docs_with_scores = vector_store.similarity_search(query=retriever_query or user_query, k=k)
+    # print(f"Retrieved documents with scores: {relevant_docs_with_scores}")
+    relevant_docs = [doc for doc in relevant_docs_with_scores]
     
-    user_content = {"Reference Documents": relevant_docs, "User Query": user_query}
+    # Filter out noise from chunks
+    noise_free_documents = filter_chunk_noise(relevant_docs) 
+    user_content_with_ref_docs = {"Reference Documents": noise_free_documents, "User Query": user_query}
     
     # Generate response
-    response = llm.structured_generate(messages=conversation_history + {"role": "user", "content": user_content}, response_class=LLMResponseWithCitations)
+    response = llm.structured_generate(messages=conversation_history, user_query=user_content_with_ref_docs, system_message=AI_ASSISTANT_SYSTEM_PROMPT, response_class=LLMResponseWithCitations)
     return response
-    
-def build_conversation_history(system_prompt: str, conversation_history: list | None):
-    messages = [
-            {"role": "system", "content": system_prompt},
-        ]
-    if conversation_history is not None:
-        messages = [
-            {"role": "system", "content": system_prompt},
-        ]
-        for turn in conversation_history:
-            messages.append({"role": "user", "content": turn["user"]})
-            messages.append({"role": "assistant", "content": turn["assistant"]})
-            
-    return messages
 
 def list_all_documents():
     embedder = OpenAIEmbedder()
     db = FaissStore(embedding_fn=embedder._client)
     return list(set(document.metadata["source"].replace("data\\docs\\","") for document in db._vs.docstore._dict.values()))
+
+def filter_chunk_noise(user_content_with_ref_docs: dict):
+    return [
+        {
+            "source": doc.metadata.get("source"),
+            "page_content": doc.page_content.rsplit("\\", 1)[-1]
+        }
+        for doc in user_content_with_ref_docs
+    ]

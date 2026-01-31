@@ -25,20 +25,32 @@ class OpenAIChatLLM:
         if not self.api_key:
             raise ValueError("OPENAI_API_KEY is not set and no api_key was provided.")
 
-        self._client = OpenAI(
-            model=self.model_name,
-            api_key=self.api_key,
-            temperature=temperature,
-        )
+        self._client = OpenAI()
         
-    def structured_generate(self, messages: list, response_class) -> any:
+    def structured_generate(self, messages: list, user_query: str, system_message:str, response_class) -> any:
         """
         Returns the assistant's text response parsed into the given response_class (a Pydantic model).
         """
-        completion = self._client.chat.completions.parse(
+        messages = [{"role": "system", "content": system_message}] + messages + [{"role": "user", "content": f"User Query: {user_query}"}]
+        print(f"OpenAIChatLLM structured_generate messages: {messages}")
+        response = self._client.chat.completions.parse(
             model=self.model_name,
             messages=messages,
             response_format=response_class,
             max_tokens=self.max_tokens,
         )
-        return completion.choices[0].message
+        print(f"OpenAIChatLLM structured_generate response: {response}")
+        return response.choices[0].message.parsed
+
+    def generate(self, messages: list, user_query: str, system_message:str) -> str:
+        """
+        Returns the assistant's text response as a string.
+        """
+        messages = [{"role": "system", "content": system_message}] + messages + [{"role": "user", "content": f"User Query: {user_query}"}]
+        response = self._client.chat.completions.create(
+            model=self.model_name,
+            messages=messages,
+            max_tokens=self.max_tokens,
+        )
+        print(f"OpenAIChatLLM generate response: {response}")
+        return response.choices[0].message.content

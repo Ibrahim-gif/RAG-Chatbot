@@ -1,9 +1,9 @@
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any, Annotated, Optional
+from typing import List, Annotated, Optional
 
 class LLMResponseWithCitations(BaseModel):
-    answer: Annotated[str, "The main answer to user's query"]
-    citation: Annotated[List[Dict[str, Any]], "List of citations"]
+    answer: Annotated[str, Field(description="The main answer to user's query")]
+    sources: Annotated[List[str], Field(description="List of Documents used as references, check the metadata source field for file name")]
     
 class RAGRouterResponse(BaseModel):
     fetch_vector_store: Annotated[

@@ -98,50 +98,9 @@ def get_response(conversation_history: list = Body(...)):
     max_history_length = 10  # Define a maximum length for the conversation history
     if len(conversation_history) > max_history_length:
         conversation_history = conversation_history[-max_history_length:]
-    response = RAGAgent(user_query=conversation_history[-1]["content"], conversation_history=conversation_history[:-1])
+    response, _ = RAGAgent(user_query=conversation_history[-1]["content"], conversation_history=conversation_history[:-1])
     if type(response) == str:
         return {"response": response}
     print(f"Sources: {response.sources}")
     return {"response": response.answer, "sources": response.sources}
      
-# import os
-# import glob
-# import tiktoken
-# import numpy as np
-# from dotenv import load_dotenv
-# from langchain_openai import OpenAIEmbeddings
-# from langchain_community.document_loaders import DirectoryLoader, TextLoader, PyPDFDirectoryLoader
-# from langchain_text_splitters import RecursiveCharacterTextSplitter
-# import faiss
-# from langchain_community.vectorstores import FAISS
-# from langchain_community.docstore.in_memory import InMemoryDocstore
-# from uuid import uuid4
-
-# load_dotenv()
-
-# knowledge_base_path = "data/docs/"
-# loader = PyPDFDirectoryLoader(knowledge_base_path)
-# docs = loader.load()
-
-# # Divide into chunks using the RecursiveCharacterTextSplitter
-
-# text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-# chunks = text_splitter.split_documents(docs)
-    
-# embeddings = OpenAIEmbeddings(model="text-embedding-3-large", api_key=os.getenv("OPENAI_API_KEY"))
-
-# index = faiss.IndexFlatL2(len(embeddings.embed_query("hello world")))
-
-# vector_store = FAISS(
-#     embedding_function=embeddings,
-#     index=index,
-#     docstore=InMemoryDocstore(),
-#     index_to_docstore_id={},
-# )
-
-# uuids = [str(uuid4()) for _ in range(len(chunks))]
-
-# vector_store.add_documents(documents=chunks, ids=uuids)
-
-# retriever = vector_store.as_retriever(search_type="mmr", search_kwargs={"k": 2})
-# retriever.invoke("Importance of quality work", filter={"page": 0})

@@ -5,7 +5,6 @@ from src.embedding.openai_embeds import OpenAIEmbedder
 from src.response_formats.definitions import LLMResponseWithCitations, RAGRouterResponse
 from configs.prompts.prompts import AI_ASSISTANT_SYSTEM_PROMPT, RAG_ROUTER_SYSTEM_PROMPT
 from langchain_community.document_loaders import PyPDFLoader
-from langchain_community.document_loaders import TextLoader
 import logging
 
 def add_to_index(file_path: str, document_type: str = "pdf"):
@@ -49,7 +48,7 @@ def RAGAgent(user_query: str, k: int = 10, conversation_history: list | None = N
         # Generate response without retrieval
         response = llm.generate(messages=conversation_history, user_query=user_query, system_message=AI_ASSISTANT_SYSTEM_PROMPT)
         print(f"RAG Router LLM-only response: {response}")
-        return response
+        return response, None
     else:
         # Proceed to retrieval-augmented generation
         return RAGGeneration(user_query=user_query, retriever_query= rag_router.retrieval_query, k=k, conversation_history=conversation_history, llm=llm)
@@ -61,9 +60,7 @@ def RAGGeneration(user_query: str, retriever_query:str | None, k: int = 5, conve
     vector_store = FaissStore(embedding_fn=embedder._client)
     
     # Perform similarity search
-    relevant_docs_with_scores = vector_store.similarity_search(query=retriever_query or user_query, k=k)
-    # print(f"Retrieved documents with scores: {relevant_docs_with_scores}")
-    relevant_docs = [doc for doc in relevant_docs_with_scores]
+    relevant_docs = vector_store.similarity_search(query=retriever_query or user_query, k=k)
     
     # Filter out noise from chunks
     noise_free_documents = filter_chunk_noise(relevant_docs) 
@@ -71,7 +68,7 @@ def RAGGeneration(user_query: str, retriever_query:str | None, k: int = 5, conve
     
     # Generate response
     response = llm.structured_generate(messages=conversation_history, user_query=user_content_with_ref_docs, system_message=AI_ASSISTANT_SYSTEM_PROMPT, response_class=LLMResponseWithCitations)
-    return response
+    return response, noise_free_documents
 
 def list_all_documents():
     embedder = OpenAIEmbedder()
@@ -81,8 +78,8 @@ def list_all_documents():
 def filter_chunk_noise(user_content_with_ref_docs: dict):
     return [
         {
-            "source": doc.metadata.get("source"),
-            "page_content": doc.page_content.rsplit("\\", 1)[-1]
+            "source": doc.metadata.get("source").rsplit("\\", 1)[-1],
+            "page_content": doc.page_content
         }
         for doc in user_content_with_ref_docs
     ]

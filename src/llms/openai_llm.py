@@ -38,6 +38,7 @@ class OpenAIChatLLM:
             messages=messages,
             response_format=response_class,
             max_tokens=self.max_tokens,
+            temperature=0.2,
         )
         print(f"OpenAIChatLLM structured_generate response: {response}")
         return response.choices[0].message.parsed
@@ -51,6 +52,7 @@ class OpenAIChatLLM:
             model=self.model_name,
             messages=messages,
             max_tokens=self.max_tokens,
+            temperature=0.2,
         )
         print(f"OpenAIChatLLM generate response: {response}")
         return response.choices[0].message.content

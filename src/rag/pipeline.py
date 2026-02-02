@@ -10,6 +10,7 @@ import logging
 def add_to_index(file_path: str, document_type: str = "pdf"):
     # Load and chunk the document
     logging.info(f"Adding document {file_path} to index with document type {document_type}")
+    
     #Load Document  
     if document_type == "pdf":    
         pdf_loader = PyPDFLoader(file_path=file_path)
@@ -36,13 +37,13 @@ def add_to_index(file_path: str, document_type: str = "pdf"):
     vector_store.add_documents(texts=texts, metadatas=metadatas)
     return True
 
-def RAGAgent(user_query: str, k: int = 10, conversation_history: list | None = None):
+def RAGAgent(user_query: str, k: int = 4, conversation_history: list | None = None):
     
     #check if the llm can answer from the previous / available context before going to retrieval
     # Initialize LLM
     llm = OpenAIChatLLM(model_name="gpt-4.1-mini")
     rag_router = llm.structured_generate(messages=conversation_history, user_query=user_query, system_message=RAG_ROUTER_SYSTEM_PROMPT, response_class=RAGRouterResponse)
-    print(f"RAG Router Decision: Retrieve = {rag_router.fetch_vector_store}, Retrieval Query = {rag_router.retrieval_query}")
+    print(f"RAG Router Decision: Retrieve = {rag_router.fetch_vector_store}, Retrieval Query = {rag_router.retrieval_queries}")
     
     if rag_router.fetch_vector_store == False:
         # Generate response without retrieval
@@ -51,16 +52,18 @@ def RAGAgent(user_query: str, k: int = 10, conversation_history: list | None = N
         return response, None
     else:
         # Proceed to retrieval-augmented generation
-        return RAGGeneration(user_query=user_query, retriever_query= rag_router.retrieval_query, k=k, conversation_history=conversation_history, llm=llm)
+        return RAGGeneration(user_query=user_query, retriever_query= rag_router.retrieval_queries, k=k, conversation_history=conversation_history, llm=llm)
     
     
-def RAGGeneration(user_query: str, retriever_query:str | None, k: int = 5, conversation_history: list | None = None, llm: OpenAIChatLLM | None = None):
+def RAGGeneration(user_query: str, retriever_query:list[str] | None, k: int = 4, conversation_history: list | None = None, llm: OpenAIChatLLM | None = None):
     # Load Vector Store
     embedder = OpenAIEmbedder()
     vector_store = FaissStore(embedding_fn=embedder._client)
     
     # Perform similarity search
-    relevant_docs = vector_store.similarity_search(query=retriever_query or user_query, k=k)
+    relevant_docs = []
+    for query in retriever_query:    
+        relevant_docs.extend(vector_store.similarity_search(query=query or user_query, k=k))
     
     # Filter out noise from chunks
     noise_free_documents = filter_chunk_noise(relevant_docs) 
@@ -75,13 +78,21 @@ def list_all_documents():
     db = FaissStore(embedding_fn=embedder._client)
     return list(set(str(document.metadata["source"]).replace("data\\docs\\","") for document in db._vs.docstore._dict.values()))
 
-def filter_chunk_noise(user_content_with_ref_docs: dict):
+def filter_chunk_noise(user_content_with_ref_docs):
+    seen_ids = set()
+    unique_docs = []
+    
+    for doc in user_content_with_ref_docs:
+        if doc.id not in seen_ids:
+            seen_ids.add(doc.id)
+            unique_docs.append(doc)
+            
     return [
         {
             "source": doc.metadata.get("source").rsplit("\\", 1)[-1],
             "page_content": doc.page_content
         }
-        for doc in user_content_with_ref_docs
+        for doc in unique_docs
     ]
 
 def delete_from_vector_store(file_name: str):

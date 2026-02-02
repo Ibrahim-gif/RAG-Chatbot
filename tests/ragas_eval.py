@@ -5,7 +5,7 @@ from ragas import EvaluationDataset
 from ragas import evaluate
 from ragas.llms import LangchainLLMWrapper
 from langchain_openai import ChatOpenAI
-from ragas.metrics import LLMContextRecall, Faithfulness, ResponseRelevancy
+from ragas.metrics import LLMContextRecall, Faithfulness, LLMContextPrecisionWithoutReference
 import yaml
 import json
 
@@ -55,7 +55,7 @@ evaluation_dataset = EvaluationDataset.from_list(dataset)
 llm = ChatOpenAI(model="gpt-4.1-mini")
 evaluator_llm = LangchainLLMWrapper(llm)
 
-result = evaluate(dataset=evaluation_dataset,metrics=[LLMContextRecall(), Faithfulness(), ResponseRelevancy()],llm=evaluator_llm)
+result = evaluate(dataset=evaluation_dataset,metrics=[LLMContextRecall(), Faithfulness(), LLMContextPrecisionWithoutReference()],llm=evaluator_llm)
 print(f"Evaluation Results: {result}")
 
 row_scores_path = "evaluation_results/ragas_row_scores-v3.jsonl"

@@ -5,8 +5,10 @@ from src.embedding.openai_embeds import OpenAIEmbedder
 from src.response_formats.definitions import LLMResponseWithCitations, RAGRouterResponse
 from configs.prompts.prompts import AI_ASSISTANT_SYSTEM_PROMPT, RAG_ROUTER_SYSTEM_PROMPT
 from langchain_community.document_loaders import PyPDFLoader
+from langsmith import traceable
 import logging
 
+@traceable(name="add_to_index", run_type="tool")
 def add_to_index(file_path: str, document_type: str = "pdf"):
     # Load and chunk the document
     logging.info(f"Adding document {file_path} to index with document type {document_type}")
@@ -37,18 +39,19 @@ def add_to_index(file_path: str, document_type: str = "pdf"):
     vector_store.add_documents(texts=texts, metadatas=metadatas)
     return True
 
+@traceable(name="RAGAgent", run_type="chain")
 def RAGAgent(user_query: str, k: int = 4, conversation_history: list | None = None):
     
     #check if the llm can answer from the previous / available context before going to retrieval
     # Initialize LLM
     llm = OpenAIChatLLM(model_name="gpt-4.1-mini")
-    rag_router = llm.structured_generate(messages=conversation_history, user_query=user_query, system_message=RAG_ROUTER_SYSTEM_PROMPT, response_class=RAGRouterResponse)
+    rag_router = llm.structured_generate(messages=conversation_history, user_query=user_query, system_message=RAG_ROUTER_SYSTEM_PROMPT, response_class=RAGRouterResponse, trace_name="Router")
     print(f"RAG Router Decision: Retrieve = {rag_router.fetch_vector_store}, Retrieval Query = {rag_router.retrieval_queries}")
     
     if rag_router.fetch_vector_store == False:
         # Generate response without retrieval
-        response = llm.generate(messages=conversation_history, user_query=user_query, system_message=AI_ASSISTANT_SYSTEM_PROMPT)
-        print(f"RAG Router LLM-only response: {response}")
+        response = llm.generate(messages=conversation_history, user_query=user_query, system_message=AI_ASSISTANT_SYSTEM_PROMPT, trace_name="Direct Answer without Retrieval")
+        
         return response, None
     else:
         # Proceed to retrieval-augmented generation
@@ -70,9 +73,10 @@ def RAGGeneration(user_query: str, retriever_query:list[str] | None, k: int = 4,
     user_content_with_ref_docs = {"Reference Documents": noise_free_documents, "User Query": user_query}
     
     # Generate response
-    response = llm.structured_generate(messages=conversation_history, user_query=user_content_with_ref_docs, system_message=AI_ASSISTANT_SYSTEM_PROMPT, response_class=LLMResponseWithCitations)
+    response = llm.structured_generate(messages=conversation_history, user_query=user_content_with_ref_docs, system_message=AI_ASSISTANT_SYSTEM_PROMPT, response_class=LLMResponseWithCitations, trace_name="RAG Answer with Citations")
     return response, noise_free_documents
 
+@traceable(name="list_all_documents", run_type="tool")
 def list_all_documents():
     embedder = OpenAIEmbedder()
     db = FaissStore(embedding_fn=embedder._client)
@@ -95,6 +99,7 @@ def filter_chunk_noise(user_content_with_ref_docs):
         for doc in unique_docs
     ]
 
+@traceable(name="delete_from_vector_store", run_type="tool")
 def delete_from_vector_store(file_name: str):
     embedder = OpenAIEmbedder()
     db = FaissStore(embedding_fn=embedder._client)

@@ -16,11 +16,13 @@ class RAGRouterResponse(BaseModel):
         Field(
             default=None,
             description=(
-                "A list of compact search queries optimized for vector retrieval. Make sure to include the best keywords that are relevant to the user's question."
-                "Each entry should represent a distinct topic from the user question. "
-                "Only set when fetch_vector_store=True. Otherwise must be null."
+                "Up to 3 compact, high-signal retrieval queries for vector search. "
+                "Each query should target a distinct facet of the user's question "
+                "Use keywords, product/system names, IDs, and domain terms; avoid full sentences. "
+                "Only set when fetch_vector_store=True; otherwise must be null."
             ),
-            min_items=1
+            min_length=1,   # list must have >= 1 item when present
+            max_length=3,   # list must have <= 3 items
         )
     ] = None
     

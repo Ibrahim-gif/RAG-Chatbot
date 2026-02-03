@@ -5,7 +5,8 @@ from ragas import EvaluationDataset
 from ragas import evaluate
 from ragas.llms import LangchainLLMWrapper
 from langchain_openai import ChatOpenAI
-from ragas.metrics import LLMContextRecall, Faithfulness, LLMContextPrecisionWithoutReference
+from ragas.metrics import LLMContextRecall, Faithfulness, ContextUtilization
+from configs.prompts.configs import configs
 import yaml
 import json
 
@@ -37,7 +38,7 @@ for query,reference in zip(questions,expected_responses):
     
     conversation_history = [{"role": "assistant", "content": "Hi there! I'm your E Source Assistant. How can I help you today?"}, {"role": "user", "content": query}]
     
-    response, relevant_docs = RAGAgent(user_query=query, k=10, conversation_history=conversation_history)
+    response, relevant_docs = RAGAgent(user_query=query, conversation_history=conversation_history, configs=configs)
     
     print(f"relevant_docs: {relevant_docs}")
     
@@ -55,7 +56,7 @@ evaluation_dataset = EvaluationDataset.from_list(dataset)
 llm = ChatOpenAI(model="gpt-4.1-mini")
 evaluator_llm = LangchainLLMWrapper(llm)
 
-result = evaluate(dataset=evaluation_dataset,metrics=[LLMContextRecall(), Faithfulness(), LLMContextPrecisionWithoutReference()],llm=evaluator_llm)
+result = evaluate(dataset=evaluation_dataset,metrics=[LLMContextRecall(), Faithfulness(), ContextUtilization()],llm=evaluator_llm)
 print(f"Evaluation Results: {result}")
 
 row_scores_path = "evaluation_results/ragas_row_scores-v3.jsonl"

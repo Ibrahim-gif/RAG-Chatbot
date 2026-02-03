@@ -1,8 +1,17 @@
+"""
+FastAPI application for Retrieval-Augmented Generation (RAG) system.
+
+This module provides REST API endpoints for uploading documents, querying the RAG system,
+listing indexed documents, and deleting documents from the vector store.
+
+"""
+
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 from src.rag.pipeline import add_to_index, list_all_documents, RAGAgent, delete_from_vector_store
 from dotenv import load_dotenv
+from configs.prompts.configs import configs
 
 load_dotenv()
 
@@ -30,18 +39,61 @@ def safe_filename(name: str) -> str:
 
 @app.get("/files")
 def list_files():
+    """
+    Retrieve a list of all indexed documents in the vector store.
+    
+    Returns:
+        list: A list of document filenames currently indexed in the system.
+        
+    Raises:
+        HTTPException: If the vector store cannot be accessed.
+    """
     return list_all_documents()
 
 @app.post("/delete")
 def delete_file(file_name: str = Body(..., embed=True)):
+    """
+    Delete a document from the vector store.
+    
+    This endpoint removes all chunks associated with the specified document
+    from the FAISS vector store and saves the updated index.
+    
+    Args:
+        file_name (str): The name of the file to delete from the vector store.
+        
+    Returns:
+        dict: Confirmation message indicating successful deletion.
+        
+    Raises:
+        HTTPException: If the document cannot be found or deleted.
+    """
     return delete_from_vector_store(file_name)
 
 
 @app.post("/upload")
 async def add_documents(file: UploadFile = File(...)):
     """
-    Upload a document and save it to disk.
-    Supported formats: PDF (.pdf) and Markdown (.md) only.
+    Upload and index a document for RAG.
+    
+    This endpoint accepts PDF (.pdf) or Markdown (.md) files, saves them to disk,
+    and adds them to the FAISS vector store. The document is automatically chunked
+    and embedded using OpenAI embeddings.
+    
+    Args:
+        file (UploadFile): The file to upload. Must be PDF or Markdown format.
+        
+    Returns:
+        dict: A dictionary containing:
+            - message (str): Confirmation message
+            - saved_to (str): Path where the file was saved
+        
+    Raises:
+        HTTPException 400: If no filename provided, filename is invalid,
+                          file extension is not .pdf or .md, or content type is invalid.
+                          
+    Supported file types:
+        - application/pdf (.pdf)
+        - text/markdown, text/x-markdown (.md)
     """
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
@@ -79,7 +131,7 @@ async def add_documents(file: UploadFile = File(...)):
     finally:
         await file.close()
         
-    add_to_index(dest_path, document_type=ext.lstrip("."))
+    add_to_index(dest_path, document_type=ext.lstrip("."), configs=configs)
 
     return {
         "message": "File uploaded successfully",
@@ -89,6 +141,32 @@ async def add_documents(file: UploadFile = File(...)):
 
 @app.post("/get_response")
 def get_response(conversation_history: list = Body(...)):
+    """
+    Get a RAG-based response to a user query.
+    
+    This endpoint processes the conversation history and generates a response
+    using either direct LLM generation or retrieval-augmented generation (RAG),
+    depending on whether the router LLM determines retrieval is necessary.
+    
+    Args:
+        conversation_history (list): A list of message dictionaries with 'role' and 'content' keys.
+                                    The last message should be the current user query.
+        
+    Returns:
+        dict: A dictionary containing:
+            - response (str): The generated answer
+            - sources (list, optional): List of source documents used (only for RAG responses)
+        
+    Raises:
+        HTTPException 400: If conversation history is empty.
+        
+    Example request:
+        {
+            "conversation_history": [
+                {"role": "user", "content": "What is energy efficiency?"}
+            ]
+        }
+    """
     print(f"Conversation History length: {len(conversation_history)}")
     
     if len(conversation_history) == 0:
@@ -98,7 +176,7 @@ def get_response(conversation_history: list = Body(...)):
     max_history_length = 10  # Define a maximum length for the conversation history
     if len(conversation_history) > max_history_length:
         conversation_history = conversation_history[-max_history_length:]
-    response, _ = RAGAgent(user_query=conversation_history[-1]["content"], conversation_history=conversation_history[:-1])
+    response, _ = RAGAgent(user_query=conversation_history[-1]["content"], conversation_history=conversation_history[:-1], configs=configs)
     if type(response) == str:
         return {"response": response}
     print(f"Sources: {response.sources}")

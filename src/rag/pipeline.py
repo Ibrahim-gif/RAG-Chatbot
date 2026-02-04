@@ -146,7 +146,8 @@ def RAGGeneration(user_query: str, retriever_query:list[str] | None, k: int = 4,
     
     # Perform similarity search
     relevant_docs = []
-    for query in retriever_query:    
+    queries_to_search = retriever_query if retriever_query is not None else [user_query]
+    for query in queries_to_search:    
         relevant_docs.extend(vector_store.similarity_search(query=query or user_query, k=k))
     
     # Filter out noise from chunks

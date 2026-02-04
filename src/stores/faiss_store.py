@@ -46,8 +46,11 @@ class FaissStore:
                          (e.g., OpenAIEmbeddings or OpenAIEmbedder client).
                          
         Raises:
-            ValueError: If embedding_fn is None.
+            AttributeError: If embedding_fn is None.
         """
+        if embedding_fn is None:
+            raise AttributeError("embedding_fn cannot be None")
+        
         self.index_dir = Path("faiss_index").resolve()
         self.embedding_fn = embedding_fn
         self._vs: Optional[FAISS] = None
@@ -143,5 +146,5 @@ class FaissStore:
         for document in self._vs.docstore._dict.values():
             if str(document.metadata.get("source")).endswith(file_name):
                 delete_list_ids.append(document.id)
-        self._vs.delete(delete_list_ids)
+        self._vs.delete(ids=delete_list_ids)
         self._vs.save_local(self.index_dir)

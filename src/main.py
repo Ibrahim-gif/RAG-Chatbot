@@ -48,7 +48,10 @@ def list_files():
     Raises:
         HTTPException: If the vector store cannot be accessed.
     """
-    return list_all_documents()
+    try:
+        return list_all_documents()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Vector store error: {str(e)}")
 
 @app.post("/delete")
 def delete_file(file_name: str = Body(..., embed=True)):
@@ -67,7 +70,12 @@ def delete_file(file_name: str = Body(..., embed=True)):
     Raises:
         HTTPException: If the document cannot be found or deleted.
     """
-    return delete_from_vector_store(file_name)
+    try:
+        return delete_from_vector_store(file_name)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/upload")

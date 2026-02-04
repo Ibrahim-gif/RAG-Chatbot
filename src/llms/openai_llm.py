@@ -126,6 +126,8 @@ class OpenAIChatLLM:
         Returns:
             str: The generated response text from the LLM.
         """
+        if messages is None:
+            messages = []
         messages = [{"role": "system", "content": system_message}] + messages + [{"role": "user", "content": f"User Query: {user_query}"}]
         t0 = time.perf_counter()
         response = self._client.chat.completions.create(

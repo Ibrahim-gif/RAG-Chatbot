@@ -1,6 +1,6 @@
 versions:
   - version: "1.0.0"
-    is_active: false
+    is_active: true
     environment: "dev"
     chunking_config:
       chunk_size: 1000
@@ -27,7 +27,7 @@ versions:
       min_relevance: 0.80
 
   - version: "1.1.0"
-    is_active: true
+    is_active: false
     environment: "dev"
     chunking_config:
       chunk_size: 1000

@@ -9,6 +9,17 @@ for type-safe LLM outputs and API responses.
 from pydantic import BaseModel, Field
 from typing import List, Annotated, Optional
 
+class Citation(BaseModel):
+    """
+    Structured representation of a citation for a document.
+    
+    Attributes:
+        source (str): The filename of the document being cited.
+        section (str): The section title or page number from which the citation is taken.
+    """
+    source: Annotated[str, Field(description="The filename / Source of the document being cited")]
+    section: Annotated[str, Field(description="The page_number of the source if present or title of the section if present from which the citation is taken")]
+
 class LLMResponseWithCitations(BaseModel):
     """
     Structured response format for RAG answers with source citations.
@@ -21,8 +32,8 @@ class LLMResponseWithCitations(BaseModel):
         sources (List[str]): List of source document filenames used to generate the answer.
     """
     answer: Annotated[str, Field(description="The main answer to user's query")]
-    sources: Annotated[List[str], Field(description="List of Documents used as references, check the metadata source field for file name")]
-    
+    sources: Annotated[List[Citation], Field(description="List of Documents used as references")]
+
 class RAGRouterResponse(BaseModel):
     """
     Structured response format for the RAG router LLM decision.

@@ -179,6 +179,7 @@ def get_response(conversation_history: list = Body(...)):
     response, _ = RAGAgent(user_query=conversation_history[-1]["content"], conversation_history=conversation_history[:-1], configs=configs)
     if type(response) == str:
         return {"response": response}
-    print(f"Sources: {response.sources}")
-    return {"response": response.answer, "sources": response.sources}
-     
+    else:
+        response = response.model_dump()
+    print(f"Response: {response}")
+    return {"response": response["answer"], "sources": response["sources"]}

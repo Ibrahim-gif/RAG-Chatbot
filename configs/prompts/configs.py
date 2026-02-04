@@ -6,8 +6,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def load_configs():
-    p = Path(os.getenv("PROMPTS_YAML_PATH", "configs/prompts/prompts.yaml"))
-    version = os.getenv("PROMPT_VERSION", "1.0.0")
+    p = Path(os.getenv("CONFIG_YAML_PATH", "configs/prompts/prompts.yaml"))
+    version = os.getenv("CONFIG_VERSION", "1.0.0")
     data = yaml.safe_load(p.read_text(encoding="utf-8"))
     
     current_version_configs = next((item for item in data["versions"] if item["version"] == version), None)

@@ -31,7 +31,7 @@ class Chunking:
         document_type (str): Type of document ('pdf' or 'md').
     """
     
-    def __init__(self, chunk_size: int =1000, chunk_overlap: int = 200, chunk_strategy: str = "Structure-Based", document_name: str = None, document_type: str = "pdf"):
+    def __init__(self, chunk_size: int =1000, chunk_overlap: int = 100, chunk_strategy: str = "Structure-Based", document_name: str = None, document_type: str = "pdf"):
         """
         Initialize the Chunking class.
         

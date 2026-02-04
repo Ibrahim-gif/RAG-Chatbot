@@ -51,8 +51,8 @@ def add_to_index(file_path: str, document_type: str = "pdf", configs: dict | Non
     elif document_type == "md":
         with open(file_path, "r", encoding="utf-8") as f:
             document = f.read()
-        
-    chunker = Chunking(document_name=file_path, document_type=document_type)
+
+    chunker = Chunking(chunk_size=configs["chunking_config"]["chunk_size"], chunk_overlap=configs["chunking_config"]["chunk_overlap"], document_name=file_path, document_type=document_type)
     chunks = chunker.chunk_document(document)
     print(f"Chunks: {chunks[0]}")
 
@@ -191,14 +191,19 @@ def filter_chunk_noise(user_content_with_ref_docs):
         if doc.id not in seen_ids:
             seen_ids.add(doc.id)
             unique_docs.append(doc)
-            
-    return [
-        {
+
+    cleaned_docs = []
+    for doc in unique_docs:
+        item = {
             "source": doc.metadata.get("source").rsplit("\\", 1)[-1],
             "page_content": doc.page_content
         }
-        for doc in unique_docs
-    ]
+        if doc.metadata.get("page") is not None:
+            item["page_number"] = doc.metadata.get("page")
+        elif doc.metadata.get("Header 1") is not None:
+            item["title"] = doc.metadata.get("Header 1")
+        cleaned_docs.append(item)
+    return cleaned_docs
 
 @traceable(name="delete_from_vector_store", run_type="tool")
 def delete_from_vector_store(file_name: str):

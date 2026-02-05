@@ -2,7 +2,19 @@
 
 ## Overview
 
-Build a Retrieval-Augmented Generation (RAG) application to query energy industry technical documentation.
+This project implements a production‑ready **Retrieval‑Augmented Generation (RAG)** system with document ingestion, vector search using FAISS, LLM‑based routing, grounded answer generation with citations, and a FastAPI service layer.
+
+The system is designed to:
+
+* Ingest PDFs and Markdown documents
+* Chunk documents using structure‑aware strategies
+* Embed chunks using OpenAI embeddings
+* Persist vectors locally using FAISS
+* Decide dynamically (via an LLM router) whether retrieval is required
+* Generate answers grounded in retrieved documents
+* Expose all functionality via a REST API
+
+---
 
 ## Project Structure
 
@@ -17,28 +29,73 @@ Build a Retrieval-Augmented Generation (RAG) application to query energy industr
 └── requirement.txt      # python requirements file
 ```
 
-## Notes
+---
 
-- Document your design decisions in this README
-- Add your strategy rationale
-- Include evaluation results and analysis
+## ⚙️ Setup & Installation
 
+### 1. Environment Setup
+Create a virtual environment to keep your dependencies isolated.
 
+```bash
+# Create the virtual environment
+python -m venv .venv
+```
+
+### 2. Activate the environment
+```
+# On Windows:
+.venv\Scripts\activate
+
+# On macOS/Linux:
+source .venv/bin/activate
+```
+
+### 3. Install Dependencies
+```
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+### 4. Configuration
+Create a .env file in the root directory and add your API keys and settings:
+```
+OPENAI_API_KEY=your_openai_key_here
+LANGSMITH_TRACING=true
+LANGSMITH_ENDPOINT=[https://api.smith.langchain.com](https://api.smith.langchain.com)
+LANGSMITH_API_KEY=your_langsmith_key_here
+LANGSMITH_PROJECT=your_project_name
+APP_ENV=dev
+CONFIG_YAML_PATH=configs/prompts/prompts.yaml
+CONFIG_VERSION=1.0.0
+```
+
+## 🏃 Running the Application
+Start the FastAPI Server
+Run the server with hot-reloading enabled for development:
+
+```
 # Retrieval‑Augmented Generation (RAG) System
+uvicorn src.main:app --reload
+```
 
-## Overview
+Once started, you can access the API documentation at:
 
-This project implements a production‑ready **Retrieval‑Augmented Generation (RAG)** system with document ingestion, vector search using FAISS, LLM‑based routing, grounded answer generation with citations, and a FastAPI service layer.
+Swagger UI: ```http://127.0.0.1:8000/docs```
 
-The system is designed to:
+## 🧪 Testing & Evaluation
+Unit Tests
+Execute the test suite using pytest:
 
-* Ingest PDFs and Markdown documents
-* Chunk documents using structure‑aware strategies
-* Embed chunks using OpenAI embeddings
-* Persist vectors locally using FAISS
-* Decide dynamically (via an LLM router) whether retrieval is required
-* Generate answers grounded in retrieved documents
-* Expose all functionality via a REST API
+```
+pytest -v /tests
+```
+
+### RAG Evaluation
+To run the RAGAS evaluation pipeline and check retrieval performance:
+
+```
+python -m evaluation.ragas_eval
+```
 
 ---
 
@@ -262,20 +319,6 @@ Get a chat response (RAG or direct)
   "sources": ["azure_auth.md"]
 }
 ```
-
----
-
-## Configuration Requirements
-
-The system expects a `configs` object with:
-
-* `embedder_model_config.model`
-* `llm_model_config.model`
-* `llm_model_config.max_tokens`
-* `llm_model_config.temperature`
-* `retriever_config.k`
-* `templates.RAG_ROUTER_SYSTEM_PROMPT`
-* `templates.AI_ASSISTANT_SYSTEM_PROMPT`
 
 ---
 

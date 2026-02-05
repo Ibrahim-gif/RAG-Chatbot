@@ -1,15 +1,27 @@
-# Core dependencies
+# Core API & Server
+fastapi
 uvicorn[standard]
-fastapi 
 python-multipart
 pydantic
-# Utilities
+
+# AI / LLM & RAG Stack
+langchain
+langchain-community
+langchain-openai
+tiktoken
+faiss-cpu
+ragas
+openai
+
+# Data & File Processing
+numpy
+pillow
+pypdf
+
+# Configuration & Utilities
 python-dotenv>=1.0.0
 
 # Testing
 pytest
 pytest-cov
 pytest-mock
-
-# Evaluation
-ragas

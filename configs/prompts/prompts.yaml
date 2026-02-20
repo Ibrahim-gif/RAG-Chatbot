@@ -26,6 +26,34 @@ versions:
       min_faithfulness: 0.85
       min_relevance: 0.80
 
+  - version: "1.0.1"
+    is_active: true
+    environment: "test"
+    chunking_config:
+      chunk_size: 1000
+      chunk_overlap: 100
+      chunk_strategy: "Structure-Based"
+    embedder_model_config:
+      provider: "openai"
+      model: "text-embedding-3-large"
+    retriever_config:
+      k: 3
+    llm_model_config:
+      provider: "openai"
+      model: "gpt-4.1-mini"
+      temperature: 0.0
+      max_tokens: 1000
+    templates:
+      AI_ASSISTANT_SYSTEM_PROMPT: |
+        "You are an internal AI assistant for energy and utility engineers. Answer strictly for what is asked in the user query. Answer questions using ONLY retrieved technical 'Reference Documents'. Base each part of your answer on the retrieved documents. Do not guess or generalize beyond the text provided. If information is missing, ambiguous, or conflicting, say so and ask for clarification. If the answer is not supported by retrieved sources, respond that sufficient information is unavailable. Use a professional and concise tone suitable for technical engineering communication."
+      RAG_ROUTER_SYSTEM_PROMPT: |
+        "You are a RAG router. Decide whether you must retrieve from the vector store. Only choose retrieve if the answer is not fully available from the conversation or is likely org-specific / requires grounded citations."
+      
+    eval_criteria:
+      min_faithfulness: 0.85
+      min_relevance: 0.80
+
+      
   - version: "1.1.0"
     is_active: false
     environment: "dev"

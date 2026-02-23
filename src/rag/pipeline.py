@@ -54,7 +54,7 @@ def add_to_index(file_path: str, document_type: str = "pdf", configs: dict | Non
 
     chunker = Chunking(chunk_size=configs["chunking_config"]["chunk_size"], chunk_overlap=configs["chunking_config"]["chunk_overlap"], document_name=file_path, document_type=document_type)
     chunks = chunker.chunk_document(document)
-    print(f"Chunks: {chunks[0]}")
+    print(f"Chunks: {chunks}")
 
     # Initialize embedder and vector store
     embedder = OpenAIEmbedder(model_name=configs["embedder_model_config"]["model"])
@@ -112,10 +112,10 @@ def RAGAgent(user_query: str, conversation_history: list | None = None, configs:
         return response, None
     else:
         # Proceed to retrieval-augmented generation
-        return RAGGeneration(user_query=user_query, retriever_query= rag_router.retrieval_queries, k=configs["retriever_config"]["k"], conversation_history=conversation_history, llm=llm, configs=configs)
+        return RAGGeneration(user_query=user_query, retriever_query= rag_router.retrieval_queries, conversation_history=conversation_history, llm=llm, configs=configs)
     
     
-def RAGGeneration(user_query: str, retriever_query:list[str] | None, k: int = 4, conversation_history: list | None = None, llm: OpenAIChatLLM | None = None, configs: dict | None = None):
+def RAGGeneration(user_query: str, retriever_query:list[str] | None, conversation_history: list | None = None, llm: OpenAIChatLLM | None = None, configs: dict | None = None):
     """
     Generate a grounded answer using retrieval-augmented generation.
     
@@ -148,7 +148,7 @@ def RAGGeneration(user_query: str, retriever_query:list[str] | None, k: int = 4,
     relevant_docs = []
     queries_to_search = retriever_query if retriever_query is not None else [user_query]
     for query in queries_to_search:    
-        relevant_docs.extend(vector_store.similarity_search(query=query or user_query, k=k))
+        relevant_docs.extend(vector_store.similarity_search(query=query or user_query, k=configs["retriever_config"]["k"], search_type=configs["retriever_config"]["search_type"]))
     
     # Filter out noise from chunks
     noise_free_documents = filter_chunk_noise(relevant_docs) 
@@ -200,10 +200,12 @@ def filter_chunk_noise(user_content_with_ref_docs):
             "page_content": doc.page_content
         }
         if doc.metadata.get("page") is not None:
-            item["page_number"] = doc.metadata.get("page")
+            print(f"Document {item['source']} has page number {doc.metadata.get('page')}")
+            item["page_number"] = doc.metadata.get("page_label") if doc.metadata.get("page_label") is not None else doc.metadata.get("page")
         elif doc.metadata.get("Header 1") is not None:
             item["title"] = doc.metadata.get("Header 1")
         cleaned_docs.append(item)
+    print(f"Cleaned Docs: {cleaned_docs[0]}")
     return cleaned_docs
 
 @traceable(name="delete_from_vector_store", run_type="tool")

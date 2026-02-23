@@ -18,7 +18,7 @@ class Citation(BaseModel):
         section (str): The section title or page number from which the citation is taken.
     """
     source: Annotated[str, Field(description="The filename / Source of the document being cited")]
-    section: Annotated[str, Field(description="The page_number of the source if present or title of the section if present from which the citation is taken")]
+    section: Annotated[str, Field(description="The page_number of the source when 'page_number' tag is present else 'title' tag from which the citation is taken")]
 
 class LLMResponseWithCitations(BaseModel):
     """

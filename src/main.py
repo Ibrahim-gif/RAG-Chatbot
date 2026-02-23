@@ -12,6 +12,7 @@ from pathlib import Path
 from src.rag.pipeline import add_to_index, list_all_documents, RAGAgent, delete_from_vector_store
 from dotenv import load_dotenv
 from configs.prompts.configs import configs
+import logging
 
 load_dotenv()
 
@@ -49,8 +50,10 @@ def list_files():
         HTTPException: If the vector store cannot be accessed.
     """
     try:
+        logging.info("Listing all documents in the vector store")
         return list_all_documents()
     except Exception as e:
+        logging.error(f"Error listing documents: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Vector store error: {str(e)}")
 
 @app.post("/delete")
